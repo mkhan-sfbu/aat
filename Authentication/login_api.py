@@ -4,8 +4,14 @@ from flask import request, jsonify
 app = flask.Flask(__name__)
 app.config["DEBUG"] = True
 
-# Sample data for user authentication
-users = {'Xinye': 'CS595', 'Kris': 'CS596', 'Shahadat': 'CS597'}
+# Database configuration
+app.config['MYSQL_USER'] = 'cs595'
+app.config['MYSQL_PASSWORD'] = 'hAlp3yGyMmZLog8S'
+app.config['MYSQL_HOST'] = 'localhost'
+app.config['MYSQL_DB'] = 'cs595'
+
+# Initialize the MySQL extension
+mysql = MySQL(app)
 
 # Login API endpoint
 @app.route('/login', methods=['POST'])
@@ -17,17 +23,21 @@ def login():
     # Check if both fields are provided
     if not username or not password:
         return jsonify({'success': False, 'message': 'Username and password are required.'}), 400
-
-    # Check if the user exists in our user data
-    if username not in users:
+    
+    # Query the database for the user
+    cur = mysql.connection.cursor()
+    cur.execute("SELECT password FROM users WHERE username = %s", (username,))
+    result = cur.fetchone()
+    cur.close()
+    
+    # Check if the user exists in the database
+    if result is None:
         return jsonify({'success': False, 'message': 'Invalid username.'}), 401
 
     # Check if the provided password matches the user's password
-    if password != users[username]:
+    if password != result[0]:
         return jsonify({'success': False, 'message': 'Invalid password.'}), 401
 
-    # Login successful
-    return jsonify({'success': True, 'message': 'Login successful.'}), 200
 
 # test endpoint
 @app.route('/')

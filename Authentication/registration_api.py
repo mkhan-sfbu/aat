@@ -1,4 +1,5 @@
 from flask import Flask, request, jsonify
+from flask_mysqldb import MySQL
 
 app = Flask(__name__)
 
@@ -17,18 +18,23 @@ def register():
     # get the user data from the request body
     data = request.get_json()
 
-    # check if username already exists in the database
+    # check if email already exists in the CompanyUser table
     cur = mysql.connection.cursor()
-    cur.execute("SELECT * FROM users WHERE username = %s", (data['username'],))
+    cur.execute("SELECT * FROM CompanyUser WHERE email = %s", (data['email'],))
     result = cur.fetchone()
-    cur.close()
-    
     if result is not None:
-        return jsonify({'success': False, 'message': 'Username already exists.'}), 409
+        cur.close()
+        return jsonify({'success': False, 'message': 'Email already exists.'}), 409
 
-    # add the user to the database
-    cur = mysql.connection.cursor()
-    cur.execute("INSERT INTO users (username, password) VALUES (%s, %s)", (data['username'], data['password']))
+    # insert data into the Company table
+    cur.execute("INSERT INTO Company (businessGroupTextId, textId, title) VALUES (%s, %s, %s)",
+                (data['businessGroupTextId'], data['textId'], data['title']))
+    company_id = cur.lastrowid
+
+    # insert data into the CompanyUser table
+    cur.execute("INSERT INTO CompanyUser (companyTextId, email, firstName, lastName, password, companyId) "
+                "VALUES (%s, %s, %s, %s, %s, %s)",
+                (data['companyTextId'], data['email'], data['firstName'], data['lastName'], data['password'], company_id))
     mysql.connection.commit()
     cur.close()
 
